@@ -116,7 +116,7 @@ def plot_biclassify_auc_curve(y_true, y_pred, save_path="auc.png", classnames=['
 def plot_confuse_matrix(cm, classnames, save_path):
     conf_matrix = pd.DataFrame(cm, index=classnames, columns=classnames)
     fig, ax = plt.subplots(figsize=(4,3), dpi=300)
-    sns.heatmap(conf_matrix, annot=True, annot_kws={"size": 15}, cmap="Blues", ax=ax)
+    sns.heatmap(conf_matrix, annot=True, annot_kws={"size": 15}, cmap="Blues", ax=ax, fmt='d')
     ax.set_ylabel('True label', fontsize=12)
     ax.set_xlabel('Predicted label', fontsize=12)
     ax.tick_params(axis='x', labelsize=10)
@@ -165,27 +165,31 @@ def plot_multiple_regressions(y_true_list, y_pred_list, names, save_path):
 def bi_classify_metrics(labels, preds, plot_cm=False, plot_auc=False, save_path_name='bi', classnames=['Negative','Positive']):
     y_true = de_onehot(labels)
     y_pred = de_onehot(preds)
-    cm = confusion_matrix(y_true, y_pred) # default 1 as postive
-    cm = cm.astype(np.float32)
+    cm = confusion_matrix(y_true, y_pred)
+    cm = cm.astype(int)
     tn = cm[0][0]
     fp = cm[0][1]
     fn = cm[1][0] 
     tp = cm[1][1]
-    tpr = rec = sen = round(tp / (tp+fn+0.0001),3)
-    tnr = spe = round(tn / (tn+fp+0.0001), 3)
-    pre = round(tp / (tp+fp+0.0001), 3)
-    acc = round((tp+tn) / (tp+fp+fn+tn+0.0001),3) # equal: accuracy_score(y_true, y_pred)
-    f1 = round((2*pre*rec) / (pre+rec+0.0001),3) # equal: f1_score(y_true, y_pred)
-    mcc = matthews_corrcoef(y_true, y_pred) # equal: mcc = (tp*tn-fp*fn) / ((tp+fp)*(fn+tp)*(fn+tn)*(fp+tn))**0.5
+    tpr = rec = sen = round(tp / (tp + fn + 0.0001), 3)
+    tnr = spe = round(tn / (tn + fp + 0.0001), 3)
+    pre = round(tp / (tp + fp + 0.0001), 3)
+    acc = round((tp + tn) / (tp + fp + fn + tn + 0.0001), 3)
+    f1 = round((2 * pre * rec) / (pre + rec + 0.0001), 3)
+    mcc = matthews_corrcoef(y_true, y_pred)
     ap = average_precision_score(y_true, y_pred)
-    auc = roc_auc_score(y_true, y_pred)
+    auc = roc_auc_score(y_true, preds[:, 1])
     if plot_cm:
-        save_path = save_path_name+'_cm.png'
+        save_path = save_path_name + '_cm.png'
         plot_confuse_matrix(cm, classnames, save_path)
     if plot_auc:
-        save_path = save_path_name+'_auc.png'
-        plot_biclassify_auc_curve(y_true, y_pred, save_path, classnames)
-    return np.array([tn,fp,fn,tp,tpr,tnr,pre,acc,ap,f1,mcc,auc])
+        save_path = save_path_name + '_auc.png'
+        plot_biclassify_auc_curve(y_true, preds[:, 1], save_path, classnames)
+    metrics = np.array([tn, fp, fn, tp, tpr, tnr, pre, acc, ap, f1, mcc, auc])
+    header = ['TN', 'FP', 'FN', 'TP', 'TPR', 'TNR', 'Precision', 'Accuracy', 'AP', 'F1', 'MCC', 'AUC']
+    np.savetxt(f'{save_path_name}_metrics.txt', [metrics], delimiter='\t', fmt='%.2f', header='\t'.join(header), comments='')
+
+    return metrics
 
 def multi_classify_metrics(labels, preds, average_method='weighted',  plot_cm=False, plot_auc=False, save_path_name='multi', classnames=['class1','class2','class3','class4','class5']):
     y_true = de_onehot(labels)
